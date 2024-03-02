@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Earthquakes in Japan</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://fonts.googleapis.com/css?family=Titillium+Web|Oswald" rel="stylesheet">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/c3.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Titillium Web', serif;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        #info {
+            z-index: 1000;
+            position: absolute;
+            width: 500px;
+            top: 1%;
+            bottom: 1%;
+            left: .5%;
+            padding: 40px 15px 900px 15px;
+            background: #343a40;
+            color: white;
+
+        }
+
+        #info a {
+            color: lightgray;
+        }
+
+        #info a:hover {
+            color: rgb(198, 21, 151);
+            opacity: 0.3;
+        }
+
+
+        #title {
+            font-size: 25px;
+            font-family: 'Oswald', sans-serif;
+        }
+
+        #title span {
+            font-size: 14px;
+            float: right;
+            margin-right: 10px;
+        }
+
+
+        #desc {
+            text-align: center;
+            color: rgb(175, 127, 127);
+            font-size: medium;
+            font-weight: bold;
+            margin-bottom: 0px;
+        }
+
+        #earthquake-count {
+            margin: 0;
+            text-align: center;
+            color: rgb(24, 194, 220);
+            font-size: 50px;
+        }
+
+        #earthquake-chart {
+            top: 20px;
+        }
+
+
+        #footer {
+            position: absolute;
+            bottom: 0px;
+            margin-bottom: 20px;
+            margin-right: 10px;
+            font-size: 13px;
+            line-height: 150%;
+            color: rgb(177, 243, 212);
+        }
+
+        #legend {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 110px;
+            background: #dfa2a2;
+            margin-right: 20px;
+            margin-bottom: 40px;
+            padding: 10px 20px 10px 10px;
+            border-radius: 3px;
+            text-align: center;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        .break {
+            position: relative;
+            margin: 0px;
+            padding: 0px;
+        }
+
+        .dot {
+            display: inline-block;
+            margin-top: 5px;
+            border-radius: 50%;
+            opacity: 0.6;
+        }
+
+        .dot-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-style: italic;
+        }
+    </style>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.js"></script>
+    <script src="js/d3.js"></script>
+    <script src="js/c3.min.js"></script>
+</head>
+
+<body>
+    <div id="info">
+        <div id="title">
+            Earthquakes in Japan - March 2020
+        </div>
+        <div id="count" class="card">
+            <h5 id="desc"> # Earthquakes Happened</h5>
+            <p id="earthquake-count"></p>
+        </div>
+        <div id="earthquake-chart"></div>
+
+        <div id="footer">
+            This displays a map of Japan with number of different locations with circles.
+            This is showing earthquakes event and represented by the circle.
+            The legend that states that the size and color of the circles correspond to
+            the magnitude of the earthquakes. The legend shows that the blue circles have a
+            magnitude of 4, the light blue circles shows that it have a magnitude of 5, and
+            the green circles shows that it have a magnitude of 6.
+        </div>
+    </div>
+    <div id="map"></div>
+    <div id="legend"></div>
+    <script>
+        mapboxgl.accessToken =
+            'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+
+        let map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v10',
+            zoom: 5,
+            minZoom: 5,
+            center: [138, 38]
+        });
+
+        let earthquakeChart = null,
+            magnitude = {},
+            numEarthquakes = 0;
+
+        const grades = [4, 5, 6],
+            colors = ['rgb(208,209,230)', 'rgb(103,169,207)', 'rgb(1,108,89)'],
+            radii = [10, 15, 20];
+
+        const legend = document.getElementById('legend');
+
+        let labels = ['<strong>Magnitude</strong>'],
+            vbreak;
+
+        for (var i = 0; i < grades.length; i++) {
+            vbreak = grades[i];
+            dot_radii = 2 * radii[i];
+            labels.push(
+                '<p class="break"><i class="dot" style="background:' + colors[i] + '; width: ' + dot_radii +
+                'px; height: ' +
+                dot_radii + 'px; "></i> <span class="dot-label" style="top: ' + dot_radii / 2 + 'px;">' + vbreak +
+                '</span></p>');
+
+        }
+        const source =
+            '<p style="text-align: right; font-size:10pt">Source: <a href="https://earthquake.usgs.gov/earthquakes/">USGS</a></p>';
+
+        legend.innerHTML = labels.join('') + source;
+
+        async function geojsonFetch() {
+            let response;
+            response = await fetch('assets/earthquakes.geojson');
+            earthquakes = await response.json();
+            map.on('load', () => {
+                map.addSource('earthquakes', {
+                    type: 'geojson',
+                    data: earthquakes
+                });
+
+
+                map.addLayer({
+                        'id': 'earthquakes-point',
+                        'type': 'circle',
+                        'source': 'earthquakes',
+                        'minzoom': 5,
+                        'paint': {
+                            'circle-radius': {
+                                'property': 'mag',
+                                'stops': [
+                                    [grades[0], radii[0]],
+                                    [grades[1], radii[1]],
+                                    [grades[2], radii[2]]
+                                ]
+                            },
+                            'circle-color': {
+                                'property': 'mag',
+                                'stops': [
+                                    [grades[0], colors[0]],
+                                    [grades[1], colors[1]],
+                                    [grades[2], colors[2]]
+                                ]
+                            },
+                            'circle-stroke-color': 'white',
+                            'circle-stroke-width': 1,
+                            'circle-opacity': 0.6
+                        }
+                    },
+                    'waterway-label'
+                );
+                map.on('click', 'earthquakes-point', (event) => {
+                    new mapboxgl.Popup()
+                        .setLngLat(event.features[0].geometry.coordinates)
+                        .setHTML(`<strong>Magnitude:</strong> ${event.features[0].properties.mag}`)
+                        .addTo(map);
+                });
+                magnitudes = calEarthquakes(earthquakes, map.getBounds());
+                numEarthquakes = magnitudes[4] + magnitudes[5] + magnitudes[6];
+                document.getElementById("earthquake-count").innerHTML = numEarthquakes;
+
+                x = Object.keys(magnitudes);
+                x.unshift("mag")
+                y = Object.values(magnitudes);
+                y.unshift("#")
+
+                earthquakeChart = c3.generate({
+                    size: {
+                        height: 350,
+                        width: 460
+                    },
+                    data: {
+                        x: 'mag',
+                        columns: [x, y],
+                        type: 'bar',
+                        colors: {
+                            '#': (d) => {
+                                return colors[d["x"]];
+                            }
+                        },
+                        onclick: function (
+                        d) {
+                            let floor = parseInt(x[1 + d["x"]]),
+                                ceiling = floor + 1;
+                            map.setFilter('earthquakes-point',
+                                ['all',
+                                    ['>=', 'mag', floor],
+                                    ['<', 'mag', ceiling]
+                                ]);
+                        }
+                    },
+                    axis: {
+                        x: {
+                            type: 'category',
+                        },
+                        y: { //count
+                            tick: {
+                                values: [10, 20, 30, 40]
+                            }
+                        }
+                    },
+                    legend: {
+                        show: false
+                    },
+                    bindto: "#earthquake-chart"
+                });
+
+            });
+
+            map.on('idle', () => {
+
+                magnitudes = calEarthquakes(earthquakes, map.getBounds());
+                numEarthquakes = magnitudes[4] + magnitudes[5] + magnitudes[6];
+                document.getElementById("earthquake-count").innerHTML = numEarthquakes;
+
+
+                x = Object.keys(magnitudes);
+                x.unshift("mag")
+                y = Object.values(magnitudes);
+                y.unshift("#")
+                earthquakeChart.load({
+                    columns: [x, y]
+                });
+            });
+        }
+
+        geojsonFetch();
+
+        function calEarthquakes(currentEarthquakes, currentMapBounds) {
+
+            let magnitudesClasses = {
+                4: 0,
+                5: 0,
+                6: 0
+            };
+            currentEarthquakes.features.forEach(function (d) {
+                if (currentMapBounds.contains(d.geometry.coordinates)) {
+                    magnitudesClasses[Math.floor(d.properties.mag)] += 1;
+                }
+
+            })
+            return magnitudesClasses;
+        }
+        const reset = document.getElementById('reset');
+        reset.addEventListener('click', event => {
+
+            map.flyTo({
+                zoom: 5,
+                center: [138, 38]
+            });
+            map.setFilter('earthquakes-point', null)
+
+
+        });
+    </script>
+</body>
+
+</html>

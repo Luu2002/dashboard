@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Earthquakes in Japan</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://fonts.googleapis.com/css?family=Titillium+Web|Oswald" rel="stylesheet">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/c3.min.css">
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.8.1/mapbox-gl.js"></script>
+    <script src="js/d3.js"></script>
+    <script src="js/c3.min.js"></script>
+</head>
+
+<body>
+    <div id="info">
+        <div id="title">
+            Earthquakes in Japan - March 2020
+        </div>
+        <div id="count" class="card">
+            <h5 id="desc"> # Earthquakes Happened</h5>
+            <p id="earthquake-count"></p>
+        </div>
+        <div id="earthquake-chart"></div>
+
+        <div id="footer">
+            This displays a map of Japan with number of different locations with circles.
+            This is showing earthquakes event and represented by the circle.
+            The legend that states that the size and color of the circles correspond to
+            the magnitude of the earthquakes. The legend shows that the blue circles have a
+            magnitude of 4, the light blue circles shows that it have a magnitude of 5, and
+            the green circles shows that it have a magnitude of 6.
+        </div>
+    </div>
+    <div id="map"></div>
+    <div id="legend"></div>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
